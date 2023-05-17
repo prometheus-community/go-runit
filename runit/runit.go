@@ -3,7 +3,6 @@ package runit
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"syscall"
 	"time"
@@ -55,13 +54,13 @@ func GetServices(dir string) ([]*service, error) {
 	if dir == "" {
 		dir = defaultServiceDir
 	}
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 	services := []*service{}
 	for _, file := range files {
-		if file.Mode()&os.ModeSymlink == os.ModeSymlink || file.IsDir() {
+		if file.Type() == os.ModeSymlink || file.IsDir() {
 			services = append(services, GetService(file.Name(), dir))
 		}
 	}
@@ -78,18 +77,6 @@ func GetService(name string, dir string) *service {
 
 func (s *service) file(file string) string {
 	return fmt.Sprintf("%s/%s/supervise/%s", s.ServiceDir, s.Name, file)
-}
-
-func (s *service) runsvRunning() (bool, error) {
-	file, err := os.OpenFile(s.file("ok"), os.O_WRONLY, 0)
-	if err != nil {
-		if err == syscall.ENXIO {
-			return false, nil
-		}
-		return false, err
-	}
-	file.Close()
-	return true, nil
 }
 
 func (s *service) status() ([]byte, error) {
